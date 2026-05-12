@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>오늘의 기분 날씨 ☁️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+body{
+  font-family:'Gowun Dodum',sans-serif;
+  background:linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  padding:28px 16px 48px;
+  color:#fff;
+}
+
+.app{width:100%;max-width:390px}
+
+/* ── SCREENS ── */
+.screen{width:100%}
+.screen.hidden{display:none!important}
+
+/* ── SELECTION ── */
+.sel-header{text-align:center;margin-bottom:24px;padding-top:8px}
+.sel-header h1{
+  font-family:'Noto Serif KR',serif;
+  font-size:24px;font-weight:700;
+  letter-spacing:-.5px;margin-bottom:6px;
+}
+.sel-header p{font-size:13px;color:rgba(255,255,255,.55);letter-spacing:.3px}
+
+.progress{display:flex;justify-content:center;gap:10px;margin-bottom:22px}
+.dot{
+  width:9px;height:9px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  transition:all .3s ease;
+}
+.dot.filled{background:#fff;transform:scale(1.25);box-shadow:0 0 8px rgba(255,255,255,.5)}
+
+.emoji-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+  margin-bottom:20px;
+}
+
+.emoji-btn{
+  aspect-ratio:1;border:none;
+  background:rgba(255,255,255,.07);
+  border-radius:16px;
+  font-size:28px;
+  cursor:pointer;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:3px;
+  border:2px solid transparent;
+  padding:8px 4px 6px;
+  transition:background .15s,border-color .15s,opacity .2s;
+  position:relative;
+}
+.emoji-btn .lbl{font-size:10px;color:rgba(255,255,255,.45);line-height:1}
+.emoji-btn:active{transform:scale(.9)}
+.emoji-btn.selected{
+  background:rgba(255,255,255,.16);
+  border-color:rgba(255,255,255,.55);
+}
+.emoji-btn.selected::after{
+  content:'✓';position:absolute;
+  top:4px;right:7px;
+  font-size:10px;color:rgba(255,255,255,.75);
+}
+.emoji-btn.disabled-btn{opacity:.28;pointer-events:none}
+
+@keyframes pop{
+  0%{transform:scale(1)}
+  40%{transform:scale(1.28)}
+  70%{transform:scale(.94)}
+  100%{transform:scale(1.05)}
+}
+.emoji-btn.pop{animation:pop .28s ease forwards}
+
+.selected-bar{
+  background:rgba(255,255,255,.06);
+  border-radius:16px;
+  padding:13px 16px;
+  margin-bottom:18px;
+  display:flex;align-items:center;gap:12px;
+}
+.bar-label{font-size:12px;color:rgba(255,255,255,.45);white-space:nowrap}
+.selected-slots{display:flex;gap:8px;flex:1;justify-content:center}
+.slot{
+  width:46px;height:46px;
+  border-radius:13px;
+  border:2px dashed rgba(255,255,255,.22);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;
+  transition:all .25s ease;
+}
+.slot.filled{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.09)}
+
+.btn-forecast{
+  width:100%;padding:16px;border:none;
+  border-radius:16px;
+  font-family:'Gowun Dodum',sans-serif;
+  font-size:16px;font-weight:700;
+  cursor:pointer;
+  background:linear-gradient(135deg,#667eea,#764ba2);
+  color:#fff;letter-spacing:.5px;
+  transition:all .25s ease;
+  opacity:.35;pointer-events:none;
+  box-shadow:0 6px 20px rgba(102,126,234,0);
+}
+.btn-forecast.active{
+  opacity:1;pointer-events:all;
+  box-shadow:0 8px 28px rgba(102,126,234,.45);
+}
+.btn-forecast.active:active{transform:scale(.97)}
+
+/* ── RESULT ── */
+.result-screen{display:flex;flex-direction:column;align-items:center;gap:16px}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(28px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.card-wrap{
+  width:100%;display:flex;justify-content:center;
+  animation:fadeUp .5s ease forwards;
+}
+
+/* 9:16 card */
+.weather-card{
+  width:min(360px,100%);
+  aspect-ratio:9/16;
+  border-radius:28px;
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+  padding:32px 26px 28px;
+  box-shadow:0 24px 64px rgba(0,0,0,.55);
+}
+
+.card-deco{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.07);pointer-events:none;
+}
+.deco1{width:280px;height:280px;top:-100px;right:-80px}
+.deco2{width:200px;height:200px;bottom:-70px;left:-60px}
+.deco3{width:120px;height:120px;top:48%;left:-30px}
+
+/* Particles */
+.particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.particle{
+  position:absolute;
+  animation:rise linear infinite;
+  opacity:0;
+  font-size:16px;
+  line-height:1;
+}
+@keyframes rise{
+  0%{transform:translateY(110%) rotate(0deg);opacity:0}
+  10%{opacity:.8}
+  85%{opacity:.6}
+  100%{transform:translateY(-20%) rotate(360deg);opacity:0}
+}
+
+.card-top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  position:relative;z-index:1;margin-bottom:auto;
+}
+.card-date-main{font-size:15px;font-weight:600;color:rgba(255,255,255,.92);margin-bottom:2px}
+.card-date-sub{font-size:12px;color:rgba(255,255,255,.55)}
+.card-badge{
+  background:rgba(255,255,255,.14);
+  backdrop-filter:blur(8px);
+  border-radius:20px;padding:4px 12px;
+  font-size:11px;color:rgba(255,255,255,.75);letter-spacing:.5px;
+}
+
+.card-main{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:relative;z-index:1;
+  padding:12px 0;
+}
+.card-icon{
+  font-size:72px;line-height:1;margin-bottom:10px;
+  filter:drop-shadow(0 6px 18px rgba(0,0,0,.25));
+  animation:float 3.5s ease-in-out infinite;
+}
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-9px)}
+}
+.card-temp{
+  font-family:'Noto Serif KR',serif;
+  font-size:58px;font-weight:700;
+  color:#fff;letter-spacing:-2px;line-height:1;margin-bottom:6px;
+}
+.card-wname{
+  font-size:17px;font-weight:600;
+  color:rgba(255,255,255,.82);letter-spacing:2.5px;
+}
+
+.card-emojis{
+  display:flex;justify-content:center;gap:10px;
+  margin:14px 0;position:relative;z-index:1;
+}
+.card-ei{
+  width:50px;height:50px;border-radius:50%;
+  background:rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;
+  border:1.5px solid rgba(255,255,255,.2);
+  backdrop-filter:blur(4px);
+}
+
+.card-msg{position:relative;z-index:1;text-align:center;margin-bottom:14px}
+.card-headline{
+  font-family:'Noto Serif KR',serif;
+  font-size:15px;font-weight:600;
+  line-height:1.6;margin-bottom:6px;
+  color:rgba(255,255,255,.95);
+}
+.card-sub{font-size:12px;color:rgba(255,255,255,.6);line-height:1.7}
+
+.card-stats{
+  display:flex;justify-content:space-around;
+  background:rgba(255,255,255,.1);
+  backdrop-filter:blur(10px);
+  border-radius:14px;padding:11px 6px;
+  margin-bottom:14px;position:relative;z-index:1;
+}
+.stat-val{font-size:15px;font-weight:700;color:#fff;text-align:center}
+.stat-lbl{font-size:10px;color:rgba(255,255,255,.5);text-align:center;margin-top:2px;letter-spacing:.2px}
+
+.card-footer{
+  display:flex;justify-content:space-between;align-items:center;
+  position:relative;z-index:1;
+}
+.card-brand{font-size:11px;color:rgba(255,255,255,.38);letter-spacing:.4px}
+.card-ftime{font-size:11px;color:rgba(255,255,255,.38)}
+
+/* Action buttons */
+.action-btns{
+  display:flex;gap:10px;
+  width:min(360px,100%);
+  animation:fadeUp .5s .18s ease both;
+}
+.btn-save{
+  flex:1;padding:15px;border:none;border-radius:14px;
+  font-family:'Gowun Dodum',sans-serif;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+  background:linear-gradient(135deg,#f093fb,#f5576c);
+  color:#fff;
+  box-shadow:0 6px 22px rgba(240,147,251,.35);
+  transition:all .2s;
+}
+.btn-save:active{transform:scale(.97)}
+.btn-save:disabled{opacity:.6;cursor:not-allowed}
+.btn-reset{
+  padding:15px 20px;
+  border:2px solid rgba(255,255,255,.18);
+  border-radius:14px;
+  font-family:'Gowun Dodum',sans-serif;
+  font-size:15px;cursor:pointer;
+  background:transparent;color:rgba(255,255,255,.65);
+  transition:all .2s;
+}
+.btn-reset:active{transform:scale(.97)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 선택 화면 -->
+  <div class="screen" id="selScreen">
+    <div class="sel-header">
+      <h1>🌤️ 오늘의 기분 날씨</h1>
+      <p>이모지 3개를 선택하면 날씨 예보를 알려드려요</p>
+    </div>
+
+    <div class="progress">
+      <div class="dot" id="d0"></div>
+      <div class="dot" id="d1"></div>
+      <div class="dot" id="d2"></div>
+    </div>
+
+    <div class="emoji-grid" id="grid"></div>
+
+    <div class="selected-bar">
+      <span class="bar-label">선택한 기분</span>
+      <div class="selected-slots">
+        <div class="slot" id="s0"></div>
+        <div class="slot" id="s1"></div>
+        <div class="slot" id="s2"></div>
+      </div>
+    </div>
+
+    <button class="btn-forecast" id="btnGo">예보 보기 🌈</button>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div class="screen hidden" id="resScreen">
+    <div class="card-wrap">
+      <div class="weather-card" id="wCard"></div>
+    </div>
+    <div class="action-btns">
+      <button class="btn-save" id="btnSave">📸 저장하기</button>
+      <button class="btn-reset" id="btnReset">🔄 다시</button>
+    </div>
+  </div>
+
+</div>
+<script>
+const EMOJIS = [
+  {e:'😴',l:'졸려',t:'sleep'},
+  {e:'😤',l:'짜증',t:'negative'},
+  {e:'😂',l:'웃겨',t:'positive'},
+  {e:'🥹',l:'감동',t:'positive'},
+  {e:'😍',l:'설레',t:'positive'},
+  {e:'🤯',l:'충격',t:'negative'},
+  {e:'😵',l:'어지러워',t:'negative'},
+  {e:'🥱',l:'하품',t:'sleep'},
+  {e:'😎',l:'쿨해',t:'positive'},
+  {e:'🤔',l:'생각중',t:'neutral'},
+  {e:'😭',l:'울어',t:'negative'},
+  {e:'🥳',l:'파티',t:'positive'},
+  {e:'😡',l:'화나',t:'negative'},
+  {e:'🤩',l:'신나',t:'positive'},
+  {e:'😶',l:'멍때림',t:'neutral'},
+  {e:'🫠',l:'녹아',t:'negative'},
+  {e:'😬',l:'민망',t:'negative'},
+  {e:'🤗',l:'포근해',t:'positive'},
+  {e:'😏',l:'의미심장',t:'positive'},
+  {e:'🫡',l:'각오',t:'neutral'},
+  {e:'🍕',l:'배고파',t:'food'},
+  {e:'💤',l:'잠와',t:'sleep'},
+  {e:'🔥',l:'열정',t:'fire'},
+  {e:'💸',l:'돈쓸래',t:'money'},
+];
+
+const CASES = [
+  {
+    id:'love',
+    match:(s)=>s.includes('😍')&&s.includes('🥹'),
+    icon:'💕',temp:'23°',name:'핑크빛 설렘',
+    grad:['#ff9a9e','#fecfef','#c471f5'],
+    head:'오늘 당신의 내면은\n사랑의 미세먼지로 가득함.',
+    sub:'오후 두근거림 주의보 발령 중.\n하트 돌풍 간간이 예보.',
+    stats:[['설렘','99%'],['텐션','하트♥'],['지속','종일']],
+    ptc:['💕','✨','🌸'],
+  },
+  {
+    id:'party',
+    match:(s)=>s.includes('🥳')&&s.includes('🤩'),
+    icon:'🎆',temp:'31°',name:'파티 폭발',
+    grad:['#f7971e','#ffd200','#f7971e'],
+    head:'오늘 당신의 내면은\n초강력 파티 기압골 형성 중.',
+    sub:'전국 신남 지수 역대 최고.\n오후 폭죽 소나기 100% 예보.',
+    stats:[['신남','200%'],['에너지','MAX'],['기분','🎉']],
+    ptc:['🎉','✨','🌟'],
+  },
+  {
+    id:'overload',
+    match:(s)=>s.includes('🤯')&&s.includes('😵'),
+    icon:'🌪️',temp:'38°',name:'정신 태풍',
+    grad:['#2c2c54','#474787','#2c2c54'],
+    head:'오늘 당신의 내면은\n강도 15 태풍 직격탄.',
+    sub:'두뇌 과부하 경보 발령.\n즉각 휴식 강력 권고.',
+    stats:[['혼돈','∞'],['정신력','0%'],['처방','휴식']],
+    ptc:['💫','⚡','🌀'],
+  },
+  {
+    id:'fire',
+    match:(s)=>s.includes('🔥'),
+    icon:'☀️',temp:'42°',name:'폭염 주의보',
+    grad:['#f46b45','#eea849'],
+    head:'오늘 당신의 내면 온도\n42도 돌파. 열정 폭염 경보.',
+    sub:'가는 곳마다 불꽃이 튀는 하루.\n수분 보충 권고.',
+    stats:[['열정','🔥MAX'],['온도','42°'],['기세','↑↑']],
+    ptc:['🔥','✨','💫'],
+  },
+  {
+    id:'money',
+    match:(s)=>s.includes('💸'),
+    icon:'🌧️',temp:'28°',name:'돈벼락 예보',
+    grad:['#134e5e','#71b280'],
+    head:'오늘 당신의 내면에는\n돈벼락 기운이 흐름.',
+    sub:'오후 횡재 소나기 간헐적 예보.\n지갑을 조심하세요.',
+    stats:[['재물운','★★★★★'],['충동','높음'],['잔고','?']],
+    ptc:['💸','✨','⭐'],
+  },
+  {
+    id:'food',
+    match:(s)=>s.includes('🍕'),
+    icon:'🍗',temp:'22°',name:'치킨 소나기',
+    grad:['#c94b4b','#4b134f'],
+    head:'오늘 당신의 내면은\n흐리고 치킨 소나기 예보.',
+    sub:'오후 배달앱 충동 100%.\n후회 없는 한 끼 강력 권고.',
+    stats:[['배고픔','극심'],['자제력','0%'],['칼로리','∞']],
+    ptc:['🍕','🍗','✨'],
+  },
+  {
+    id:'sleep2',
+    match:(s)=>['😴','💤','🥱'].filter(e=>s.includes(e)).length>=2,
+    icon:'🌫️',temp:'17°',name:'수면 안개',
+    grad:['#373b44','#4286f4'],
+    head:'오늘 당신의 내면은\n짙은 수면 안개가 끼어 있음.',
+    sub:'전국 졸음 특보 발령.\n오후 낮잠 소나기 강하게 예보.',
+    stats:[['졸음','최고조'],['각성','0%'],['처방','침대']],
+    ptc:['💤','🌙','⭐'],
+  },
+  {
+    id:'angry_cry',
+    match:(s)=>s.includes('😡')&&s.includes('😭'),
+    icon:'⛈️',temp:'9°',name:'분노 집중호우',
+    grad:['#283048','#859398'],
+    head:'오늘 당신의 내면은\n분노와 눈물의 폭풍우.',
+    sub:'감정 배수로 점검 권고.\n우산 필수. 내일은 맑아요.',
+    stats:[['눈물','폭발'],['분노','최고'],['예보','회복중']],
+    ptc:['⛈️','💧','⚡'],
+  },
+  {
+    id:'cry',
+    match:(s)=>s.includes('😭'),
+    icon:'🌧️',temp:'14°',name:'감성 장마',
+    grad:['#3a7bd5','#3a6073'],
+    head:'오늘 당신의 내면은\n감성 장마 한가운데.',
+    sub:'울어도 괜찮아요. 비 온 뒤\n땅이 굳어지는 법.',
+    stats:[['습도','99%'],['감성','↑↑'],['위로','필요']],
+    ptc:['💧','🌧️','🌈'],
+  },
+  {
+    id:'angry',
+    match:(s)=>s.includes('😡'),
+    icon:'⚡',temp:'33°',name:'낙뢰 주의보',
+    grad:['#1a1a1a','#434343'],
+    head:'오늘 당신의 내면에는\n돌발 분노 낙뢰 주의보.',
+    sub:'주변에 방어막 치는 중.\n심호흡 10회 권고.',
+    stats:[['분노','🔴위험'],['온도','폭발'],['진정','필요']],
+    ptc:['⚡','💫','🌩️'],
+  },
+  {
+    id:'melt',
+    match:(s)=>s.includes('🫠'),
+    icon:'🌊',temp:'36°',name:'녹아내리는 중',
+    grad:['#f2994a','#f2c94c'],
+    head:'오늘 당신의 내면은\n서서히 녹아 흘러내리는 중.',
+    sub:'전신 기력 방전 상태.\n즉각 충전 권고.',
+    stats:[['기력','0%'],['형태','액체'],['처방','아이스']],
+    ptc:['💧','🌊','✨'],
+  },
+  {
+    id:'cool',
+    match:(s)=>s.includes('😎'),
+    icon:'😎',temp:'24°',name:'쿨한 맑음',
+    grad:['#005c97','#363795'],
+    head:'오늘 당신의 내면은\n쿨함 지수 역대 최고.',
+    sub:'전국 멋있음 주의보 발령.\n어디 가도 시선 집중 예보.',
+    stats:[['쿨함','9999'],['매력','↑↑↑'],['날씨','맑음']],
+    ptc:['😎','✨','⭐'],
+  },
+  {
+    id:'warm',
+    match:(s)=>s.includes('🤗'),
+    icon:'🌸',temp:'22°',name:'포근한 봄날',
+    grad:['#ff9966','#ff5e62'],
+    head:'오늘 당신의 내면은\n포근한 봄바람이 가득.',
+    sub:'주변으로 따뜻함 전파 예보.\n오후 포옹 충동 주의.',
+    stats:[['따뜻함','가득'],['포근함','MAX'],['기분','🌸']],
+    ptc:['🌸','🌼','✨'],
+  },
+  {
+    id:'sly',
+    match:(s)=>s.includes('😏'),
+    icon:'🌤️',temp:'26°',name:'알 수 없는 맑음',
+    grad:['#3f2b96','#a8c0ff'],
+    head:'오늘 당신의 내면은\n무언가를 알고 있는 기운.',
+    sub:'주변인 의심 수치 상승 중.\n의미심장한 미소 주의보.',
+    stats:[['비밀','있음'],['표정','😏'],['눈치','100']],
+    ptc:['✨','⭐','🌟'],
+  },
+  {
+    id:'philos',
+    match:(s)=>s.includes('🤔')&&s.includes('😶'),
+    icon:'🌫️',temp:'19°',name:'철학적 안개',
+    grad:['#485563','#29323c'],
+    head:'오늘 당신의 내면은\n깊고 짙은 철학적 안개.',
+    sub:'나는 누구이고 여기는 어디인가.\n오후 인생 고찰 주의보.',
+    stats:[['고민','DEEP'],['생각','∞'],['답','없음']],
+    ptc:['🌫️','💭','⭐'],
+  },
+  {
+    id:'pos3',
+    match:(_,c)=>c.pos>=3,
+    icon:'☀️',temp:'28°',name:'완벽한 맑음',
+    grad:['#f7971e','#ffd200'],
+    head:'오늘 당신의 내면은\n완벽하게 화창하고 맑음.',
+    sub:'자외선 지수 최강. 긍정 에너지\n전국 확산 예보.',
+    stats:[['기분','☀️최고'],['에너지','100%'],['행복','↑↑']],
+    ptc:['☀️','✨','🌟'],
+  },
+  {
+    id:'pos2',
+    match:(_,c)=>c.pos===2&&c.neg<=1,
+    icon:'🌤️',temp:'24°',name:'대체로 맑음',
+    grad:['#2980b9','#6dd5fa','#fff'],
+    head:'오늘 당신의 내면은\n대체로 맑고 가끔 짜증 구름.',
+    sub:'오전 쾌청, 오후 돌발 짜증 약간.\n전반적으로 좋은 하루.',
+    stats:[['맑음','70%'],['구름','30%'],['기분','양호']],
+    ptc:['🌤️','☁️','✨'],
+  },
+  {
+    id:'mix',
+    match:(_,c)=>c.pos===1&&c.neg===1,
+    icon:'🌦️',temp:'21°',name:'변덕스러운 날씨',
+    grad:['#a1c4fd','#c2e9fb'],
+    head:'오늘 당신의 내면은\n맑다가 흐렸다 오락가락.',
+    sub:'아침엔 기대, 오후엔 현타.\n우산 챙기기 권고.',
+    stats:[['예측','불가'],['감정','변덕'],['결론','모름']],
+    ptc:['🌦️','☁️','💧'],
+  },
+  {
+    id:'neg2',
+    match:(_,c)=>c.neg===2&&c.pos<=1,
+    icon:'🌧️',temp:'13°',name:'흐리고 비',
+    grad:['#3a7bd5','#3a6073'],
+    head:'오늘 당신의 내면은\n잔뜩 흐리고 비가 내림.',
+    sub:'오늘 하루 조금 울어도 괜찮아요.\n내일은 맑을 거예요.',
+    stats:[['습도','85%'],['기압','낮음'],['예보','내일맑음']],
+    ptc:['🌧️','💧','☁️'],
+  },
+  {
+    id:'neg3',
+    match:(_,c)=>c.neg>=3,
+    icon:'⛈️',temp:'8°',name:'폭풍우',
+    grad:['#0f0c29','#302b63','#24243e'],
+    head:'오늘 당신의 내면은\n초강력 폭풍우 직격탄.',
+    sub:'외출 자제, 집에서 쉬는 날.\n좋아하는 것으로 위로 권고.',
+    stats:[['폭풍','100%'],['기력','↓↓'],['처방','치유']],
+    ptc:['⛈️','⚡','💧'],
+  },
+  {
+    id:'neutral',
+    match:(_,c)=>c.neutral>=2,
+    icon:'🌫️',temp:'18°',name:'짙은 안개',
+    grad:['#606c88','#3f4c6b'],
+    head:'오늘 당신의 내면은\n방향을 잃은 짙은 안개.',
+    sub:'감정의 나침반을 찾는 중.\n오후 자기 성찰 소나기 예보.',
+    stats:[['방향','모름'],['감정','안개'],['답','탐색중']],
+    ptc:['🌫️','💭','⭐'],
+  },
+  {
+    id:'default',
+    match:()=>true,
+    icon:'⛅',temp:'20°',name:'구름 많음',
+    grad:['#8e9eab','#eef2f3'],
+    head:'오늘 당신의 내면은\n구름이 많고 복잡함.',
+    sub:'다양한 감정이 교차하는 하루.\n천천히 걸어가세요.',
+    stats:[['날씨','흐림'],['감정','복합'],['기분','보통']],
+    ptc:['⛅','☁️','🌬️'],
+  },
+];
+
+let sel = [];
+
+function buildGrid() {
+  const g = document.getElementById('grid');
+  EMOJIS.forEach(({e,l}) => {
+    const b = document.createElement('button');
+    b.className = 'emoji-btn';
+    b.dataset.e = e;
+    b.innerHTML = `<span>${e}</span><span class="lbl">${l}</span>`;
+    b.addEventListener('click', () => toggle(e, b));
+    g.appendChild(b);
+  });
+}
+
+function toggle(emoji, btn) {
+  if (sel.includes(emoji)) {
+    sel = sel.filter(e => e !== emoji);
+    btn.classList.remove('selected','pop');
+  } else {
+    if (sel.length >= 3) return;
+    sel.push(emoji);
+    btn.classList.remove('pop');
+    void btn.offsetWidth;
+    btn.classList.add('selected','pop');
+  }
+  syncUI();
+}
+
+function syncUI() {
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('d'+i).classList.toggle('filled', i < sel.length);
+    const s = document.getElementById('s'+i);
+    s.textContent = sel[i] || '';
+    s.classList.toggle('filled', !!sel[i]);
+  }
+  const btn = document.getElementById('btnGo');
+  btn.classList.toggle('active', sel.length === 3);
+  document.querySelectorAll('.emoji-btn').forEach(b => {
+    b.classList.toggle('disabled-btn', sel.length === 3 && !sel.includes(b.dataset.e));
+  });
+}
+
+function getCase() {
+  const c = {pos:0,neg:0,neutral:0,sleep:0};
+  sel.forEach(e => {
+    const f = EMOJIS.find(x => x.e === e);
+    if (!f) return;
+    if (f.t === 'positive') c.pos++;
+    else if (f.t === 'negative') c.neg++;
+    else if (f.t === 'neutral') c.neutral++;
+    else if (f.t === 'sleep') c.sleep++;
+  });
+  return CASES.find(ca => ca.match(sel, c)) || CASES[CASES.length-1];
+}
+
+function getDateStr() {
+  const n = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  const h = n.getHours();
+  const ampm = h < 12 ? '오전' : '오후';
+  const hh = h % 12 || 12;
+  return {
+    date: `${n.getMonth()+1}월 ${n.getDate()}일 (${days[n.getDay()]})`,
+    time: `${ampm} ${hh}시`,
+  };
+}
+
+function showResult() {
+  const ca = getCase();
+  const {date, time} = getDateStr();
+
+  const stops = ca.grad.map((c,i) =>
+    `${c} ${Math.round(i/(ca.grad.length-1)*100)}%`
+  ).join(',');
+
+  const card = document.getElementById('wCard');
+  card.style.background = `linear-gradient(160deg,${stops})`;
+
+  // Particles
+  const ptcHtml = Array.from({length:10}, (_,i) => {
+    const sym = ca.ptc[i % ca.ptc.length];
+    const left = 5 + Math.random()*85;
+    const dur = 5 + Math.random()*7;
+    const delay = -(Math.random()*8);
+    const size = 12 + Math.random()*10;
+    return `<div class="particle" style="left:${left}%;font-size:${size}px;animation-duration:${dur}s;animation-delay:${delay}s">${sym}</div>`;
+  }).join('');
+
+  const statsHtml = ca.stats.map(([l,v]) =>
+    `<div><div class="stat-val">${v}</div><div class="stat-lbl">${l}</div></div>`
+  ).join('');
+
+  const emojisHtml = sel.map(e =>
+    `<div class="card-ei">${e}</div>`
+  ).join('');
+
+  card.innerHTML = `
+    <div class="particles">${ptcHtml}</div>
+    <div class="card-deco deco1"></div>
+    <div class="card-deco deco2"></div>
+    <div class="card-deco deco3"></div>
+
+    <div class="card-top">
+      <div>
+        <div class="card-date-main">${date}</div>
+        <div class="card-date-sub">${time} 기준</div>
+      </div>
+      <div class="card-badge">기분 날씨</div>
+    </div>
+
+    <div class="card-main">
+      <div class="card-icon">${ca.icon}</div>
+      <div class="card-temp">${ca.temp}</div>
+      <div class="card-wname">${ca.name}</div>
+    </div>
+
+    <div class="card-emojis">${emojisHtml}</div>
+
+    <div class="card-msg">
+      <div class="card-headline">${ca.head.replace(/\n/g,'<br>')}</div>
+      <div class="card-sub">${ca.sub.replace(/\n/g,'<br>')}</div>
+    </div>
+
+    <div class="card-stats">${statsHtml}</div>
+
+    <div class="card-footer">
+      <div class="card-brand">오늘의 기분 날씨 ☁️</div>
+      <div class="card-ftime">${time}</div>
+    </div>
+  `;
+
+  document.getElementById('selScreen').classList.add('hidden');
+  document.getElementById('resScreen').classList.remove('hidden');
+}
+
+function saveImg() {
+  const btn = document.getElementById('btnSave');
+  const card = document.getElementById('wCard');
+  btn.textContent = '저장 중...';
+  btn.disabled = true;
+
+  html2canvas(card, {
+    scale: 3,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: null,
+    logging: false,
+    ignoreElements: el => el.classList.contains('particles'),
+  }).then(canvas => {
+    const a = document.createElement('a');
+    const d = new Date();
+    a.download = `기분날씨_${d.getMonth()+1}${d.getDate()}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }).catch(() => {
+    alert('저장 실패. 다시 시도해주세요.');
+  }).finally(() => {
+    btn.textContent = '📸 저장하기';
+    btn.disabled = false;
+  });
+}
+
+function reset() {
+  sel = [];
+  document.querySelectorAll('.emoji-btn').forEach(b =>
+    b.classList.remove('selected','pop','disabled-btn')
+  );
+  syncUI();
+  document.getElementById('resScreen').classList.add('hidden');
+  document.getElementById('selScreen').classList.remove('hidden');
+}
+
+buildGrid();
+syncUI();
+document.getElementById('btnGo').addEventListener('click', showResult);
+document.getElementById('btnSave').addEventListener('click', saveImg);
+document.getElementById('btnReset').addEventListener('click', reset);
+</script>
+</body>
+</html>
