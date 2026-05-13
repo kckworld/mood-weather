@@ -19,8 +19,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<!-- Kakao SDK: Kakao Developers에서 앱 등록 후 JS 키를 아래에 입력하세요 -->
-<script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 
@@ -289,18 +287,6 @@ body{
   transition:all .2s;
 }
 .btn-reset:active{transform:scale(.97)}
-.btn-kakao{
-  padding:15px 18px;
-  border:none;border-radius:14px;
-  font-family:'Gowun Dodum',sans-serif;
-  font-size:15px;cursor:pointer;
-  background:#FEE500;color:#191919;
-  font-weight:700;
-  transition:all .2s;
-  display:flex;align-items:center;gap:6px;
-  white-space:nowrap;
-}
-.btn-kakao:active{transform:scale(.97)}
 </style>
 </head>
 <body>
@@ -340,11 +326,7 @@ body{
     </div>
     <div class="action-btns">
       <button class="btn-save" id="btnSave">📸 저장하기</button>
-      <button class="btn-kakao" id="btnKakao">
-        <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 1C4.582 1 1 3.896 1 7.455c0 2.29 1.52 4.305 3.818 5.478l-.972 3.57c-.085.31.267.557.54.37L8.84 14.26c.052.005.104.008.16.008C13.418 14.268 17 11.372 17 7.456 17 3.896 13.418 1 9 1z" fill="#191919"/></svg>
-        카카오
-      </button>
-      <button class="btn-reset" id="btnReset">🔄</button>
+      <button class="btn-reset" id="btnReset">🔄 다시</button>
     </div>
   </div>
 
@@ -891,42 +873,6 @@ function reset() {
   document.getElementById('selScreen').classList.remove('hidden');
 }
 
-// ── 카카오 공유 ──
-// Kakao Developers(developers.kakao.com)에서 앱 등록 후 JavaScript 키를 입력하세요.
-const KAKAO_JS_KEY = 'ae943ad3be279e3faeec1d146c1d61dc';
-
-function initKakao() {
-  if (typeof Kakao === 'undefined' || KAKAO_JS_KEY === 'YOUR_KAKAO_JS_KEY') return;
-  if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
-}
-
-function shareKakao() {
-  if (typeof Kakao === 'undefined' || KAKAO_JS_KEY === 'YOUR_KAKAO_JS_KEY') {
-    alert('카카오 공유를 사용하려면\nKakao Developers에서 앱을 등록하고\nJS 키를 코드에 입력해주세요.');
-    return;
-  }
-  Kakao.Share.sendDefault({
-    objectType: 'feed',
-    content: {
-      title: '오늘의 기분 날씨 ☁️',
-      description: '이모지 3개로 오늘의 기분을 날씨 예보로 확인해봐요',
-      imageUrl: 'https://placehold.co/800x400/667eea/ffffff?text=Mood+Weather',
-      link: {
-        mobileWebUrl: 'https://kckworld.github.io/mood-weather',
-        webUrl: 'https://kckworld.github.io/mood-weather',
-      },
-    },
-    buttons: [{
-      title: '내 기분 날씨 보기',
-      link: {
-        mobileWebUrl: 'https://kckworld.github.io/mood-weather',
-        webUrl: 'https://kckworld.github.io/mood-weather',
-      },
-    }],
-  });
-}
-
-initKakao();
 buildGrid();
 syncUI();
 document.getElementById('btnGo').addEventListener('click', showResult);
